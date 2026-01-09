@@ -256,19 +256,30 @@ AFHTTPSessionManager *networkManager;
 }
 
 - (BOOL)xm_canRetryWithError:(NSError *)error {
-    // 无网络，没必要 retry
+
+    // 没网，换域名也没用
     if (![Tools isConnectionAvailable]) {
         return NO;
     }
 
-    // 明确的客户端错误，不 retry（可按你们业务再细化）
+    // 只处理真正的网络传输错误
     if ([error.domain isEqualToString:NSURLErrorDomain]) {
-        if (error.code >= 400 && error.code < 500) {
-            return NO;
+        switch (error.code) {
+            case NSURLErrorTimedOut:
+            case NSURLErrorCannotFindHost:
+            case NSURLErrorCannotConnectToHost:
+            case NSURLErrorDNSLookupFailed:
+            case NSURLErrorNetworkConnectionLost:
+            case NSURLErrorNotConnectedToInternet:
+                return YES;
+
+            default:
+                return NO;
         }
     }
 
-    return YES;
+    // 其他 domain（比如自定义 error），默认不 retry
+    return NO;
 }
 
 - (NSURLSessionTask *)xm_postWithDomains:(NSArray<NSString *> *)domains
